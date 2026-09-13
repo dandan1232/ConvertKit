@@ -1,0 +1,5 @@
+# Ignore dot-prefixed files and directories at every level.
+.*
+
+# Keep repository configuration tracked.
+!.gitignore
