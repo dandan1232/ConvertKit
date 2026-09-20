@@ -23,7 +23,7 @@
       <div class="converter-card">
         <!-- 文件上传区域 -->
         <div class="upload-zone" id="upload-zone">
-          <input type="file" id="file-input" accept=".pdf,.md,.markdown,.epub,.docx,.doc,.txt,.html,.htm" hidden>
+          <input type="file" id="file-input" accept=".pdf,.md,.markdown,.txt,.html,.htm" hidden>
           <div class="upload-content">
             <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -31,7 +31,7 @@
               <line x1="12" y1="3" x2="12" y2="15"></line>
             </svg>
             <p class="upload-text">拖拽文件到此处，或点击选择文件</p>
-            <p class="upload-hint">支持 PDF、Markdown、Word、EPUB、HTML、TXT</p>
+            <p class="upload-hint">可读取 PDF、Markdown、HTML、TXT</p>
           </div>
         </div>
 
@@ -66,12 +66,6 @@
             <label for="target-format">目标格式</label>
             <select id="target-format" disabled>
               <option value="">-- 选择格式 --</option>
-              <option value="pdf">PDF</option>
-              <option value="md">Markdown</option>
-              <option value="html">HTML</option>
-              <option value="txt">纯文本</option>
-              <option value="docx">Word (DOCX)</option>
-              <option value="epub">EPUB</option>
             </select>
           </div>
         </div>
@@ -141,7 +135,9 @@
     </footer>
   </div>
 
-  <!-- EPUB 生成库 -->
+  <!-- 本地文件解析与生成库 -->
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 
   <script src="app.js"></script>

@@ -17,6 +17,23 @@ const statusMessage = document.getElementById('status-message');
 
 let currentFile = null;
 
+const formatOptions = {
+  pdf: { label: 'PDF', targets: ['docx'] },
+  md: { label: 'Markdown', targets: ['html', 'txt', 'epub'] },
+  markdown: { label: 'Markdown', targets: ['html', 'txt', 'epub'] },
+  html: { label: 'HTML', targets: ['md', 'txt', 'epub'] },
+  htm: { label: 'HTML', targets: ['md', 'txt', 'epub'] },
+  txt: { label: '纯文本', targets: ['html', 'md', 'epub'] }
+};
+
+const targetLabels = {
+  html: 'HTML',
+  md: 'Markdown',
+  txt: '纯文本',
+  docx: 'Word (DOCX)',
+  epub: 'EPUB'
+};
+
 // 文件大小格式化
 function formatFileSize(bytes) {
   if (bytes === 0) return '0 B';
@@ -88,24 +105,27 @@ function handleFile(file) {
 
   // 检测源格式
   const ext = getFileExtension(file.name);
-  const formatMap = {
-    'pdf': 'PDF',
-    'md': 'Markdown',
-    'markdown': 'Markdown',
-    'docx': 'Word (DOCX)',
-    'doc': 'Word (DOC)',
-    'epub': 'EPUB',
-    'html': 'HTML',
-    'htm': 'HTML',
-    'txt': '纯文本'
-  };
+  const source = formatOptions[ext];
+  sourceFormat.textContent = source?.label || ext.toUpperCase();
 
-  sourceFormat.textContent = formatMap[ext] || ext.toUpperCase();
+  updateTargetOptions(source?.targets || []);
+  targetFormat.disabled = !source;
 
-  // 启用格式选择
-  targetFormat.disabled = false;
-  targetFormat.value = '';
+  if (!source) {
+    showStatus(`暂不支持读取 ${ext.toUpperCase()} 文件`, 'error');
+  } else {
+    hideStatus();
+  }
+
   updateConvertButton();
+}
+
+function updateTargetOptions(targets) {
+  targetFormat.replaceChildren(new Option('-- 选择格式 --', ''));
+
+  targets.forEach((format) => {
+    targetFormat.add(new Option(targetLabels[format], format));
+  });
 }
 
 // 移除文件
@@ -118,7 +138,7 @@ removeFileBtn.addEventListener('click', () => {
 
   sourceFormat.textContent = '自动检测';
   targetFormat.disabled = true;
-  targetFormat.value = '';
+  updateTargetOptions([]);
 
   hideStatus();
   updateConvertButton();
@@ -169,10 +189,11 @@ convertButton.addEventListener('click', async () => {
 
 // 核心转换函数
 async function convertFile(file, sourceExt, targetExt) {
-  const text = await readFileAsText(file);
-
   // MVP 支持的转换路径
   const converters = {
+    // PDF 相关
+    'pdf_to_docx': pdfToDocx,
+
     // Markdown 相关
     'md_to_html': mdToHtml,
     'markdown_to_html': mdToHtml,
@@ -192,7 +213,7 @@ async function convertFile(file, sourceExt, targetExt) {
     // 纯文本相关
     'txt_to_html': txtToHtml,
     'txt_to_md': txtToMd,
-    'txt_to_epub': txtToEpub,
+    'txt_to_epub': txtToEpub
   };
 
   const converterKey = `${sourceExt}_to_${targetExt}`;
@@ -206,11 +227,12 @@ async function convertFile(file, sourceExt, targetExt) {
   }
 
   try {
-    const converted = await converter(text);
+    const input = sourceExt === 'pdf' ? file : await readFileAsText(file);
+    const converted = await converter(input);
     let blob;
 
-    // EPUB 转换已经返回 Blob，其他格式需要创建 Blob
-    if (targetExt === 'epub') {
+    // EPUB 和 DOCX 转换已经返回 Blob，其他格式需要创建 Blob
+    if (targetExt === 'epub' || targetExt === 'docx') {
       blob = converted;
     } else {
       blob = new Blob([converted], { type: getMimeType(targetExt) });
@@ -248,6 +270,91 @@ function getMimeType(ext) {
 }
 
 // ========== 转换函数 ==========
+
+// PDF → DOCX
+async function pdfToDocx(file) {
+  if (typeof pdfjsLib === 'undefined' || typeof docx === 'undefined') {
+    throw new Error('转换组件加载失败，请检查网络后刷新页面');
+  }
+
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+
+  const pdfData = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+  const paragraphs = [];
+  let extractedTextLength = 0;
+
+  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+    const page = await pdf.getPage(pageNumber);
+    const textContent = await page.getTextContent();
+    const lines = groupPdfTextItems(textContent.items);
+
+    lines.forEach((line, lineIndex) => {
+      extractedTextLength += line.trim().length;
+      paragraphs.push(new docx.Paragraph({
+        children: [new docx.TextRun(line || ' ')],
+        pageBreakBefore: pageNumber > 1 && lineIndex === 0,
+        spacing: { after: 120 }
+      }));
+    });
+  }
+
+  if (extractedTextLength === 0) {
+    throw new Error('未检测到可提取文字；扫描件 PDF 需要先进行 OCR 文字识别');
+  }
+
+  const document = new docx.Document({
+    sections: [{
+      properties: {},
+      children: paragraphs
+    }]
+  });
+
+  return await docx.Packer.toBlob(document);
+}
+
+function groupPdfTextItems(items) {
+  const lines = [];
+  let currentLine = '';
+  let currentY = null;
+  let lastEndX = null;
+
+  const pushLine = () => {
+    if (currentLine.trim()) {
+      lines.push(currentLine.trim());
+    }
+    currentLine = '';
+    lastEndX = null;
+  };
+
+  items.forEach((item) => {
+    const text = item.str || '';
+    const x = item.transform?.[4] || 0;
+    const y = item.transform?.[5] || 0;
+    const startsNewLine = currentY !== null && Math.abs(y - currentY) > 2;
+
+    if (startsNewLine) {
+      pushLine();
+    }
+
+    if (currentLine && lastEndX !== null && x - lastEndX > 2) {
+      currentLine += ' ';
+    }
+
+    currentLine += text;
+    currentY = y;
+    lastEndX = x + (item.width || 0);
+
+    if (item.hasEOL) {
+      pushLine();
+      currentY = null;
+    }
+  });
+
+  pushLine();
+  return lines;
+}
 
 // Markdown → HTML
 function mdToHtml(markdown) {

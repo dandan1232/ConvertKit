@@ -16,9 +16,12 @@
 
 | 源格式 | 目标格式 |
 |--------|----------|
+| PDF (.pdf，文字型) | Word (.docx) |
 | Markdown (.md) | HTML, TXT, EPUB |
 | HTML (.html/.htm) | Markdown, TXT, EPUB |
 | TXT (.txt) | HTML, Markdown, EPUB |
+
+> 扫描件 PDF 没有可直接提取的文字层，需要先经过 OCR 文字识别。
 
 ## 快速开始
 
@@ -57,7 +60,7 @@ open http://localhost:8080
 
 ## 路线图
 
-- [ ] PDF 文本提取 (PDF → TXT)
+- [x] PDF 文本提取并生成 Word (PDF → DOCX)
 - [ ] Word 文档支持 (DOCX ↔ 其他格式)
 - [ ] 批量转换功能
 - [ ] 转换历史记录
