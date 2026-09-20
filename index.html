@@ -3,143 +3,108 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ConvertKit - 在线文件格式转换工具</title>
+  <meta name="description" content="无需上传文件，在浏览器中快速完成 PDF、Markdown、HTML 与 TXT 格式转换。">
+  <title>ConvertKit - 轻快的本地文件转换工具</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="container">
-    <header class="header">
-      <div class="logo">
-        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"></circle>
-          <path d="M12 6v12M6 12h12"></path>
-        </svg>
-        <h1>ConvertKit</h1>
-      </div>
-      <p class="tagline">快速、安全的在线文件格式转换工具</p>
+  <div class="page-shell">
+    <header class="site-header">
+      <a class="brand" href="#" aria-label="ConvertKit 首页">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+            <path d="M7 7h11l-3-3"></path><path d="M17 17H6l3 3"></path>
+            <path d="M18 7l-3 3"></path><path d="M6 17l3-3"></path>
+          </svg>
+        </span>
+        <span>ConvertKit</span>
+      </a>
+      <div class="privacy-pill"><span class="privacy-dot" aria-hidden="true"></span>文件不会离开你的浏览器</div>
     </header>
 
-    <main class="main">
-      <div class="converter-card">
-        <!-- 文件上传区域 -->
-        <div class="upload-zone" id="upload-zone">
-          <input type="file" id="file-input" accept=".pdf,.md,.markdown,.txt,.html,.htm" hidden>
-          <div class="upload-content">
-            <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="17 8 12 3 7 8"></polyline>
-              <line x1="12" y1="3" x2="12" y2="15"></line>
-            </svg>
-            <p class="upload-text">拖拽文件到此处，或点击选择文件</p>
-            <p class="upload-hint">可读取 PDF、Markdown、HTML、TXT</p>
+    <main>
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="hero-note">免费 · 无需注册 · 本地处理</p>
+          <h1 id="hero-title">格式转换，<br><span>别搞得太复杂。</span></h1>
+          <p class="hero-description">把文件放进来，选好目标格式，剩下的交给浏览器。没有上传等待，也不用担心隐私。</p>
+          <div class="format-cloud" aria-label="支持的文件格式">
+            <span class="format-chip chip-pdf">PDF</span><span class="format-chip chip-md">MD</span>
+            <span class="format-chip chip-html">HTML</span><span class="format-chip chip-word">WORD</span>
+            <span class="format-chip chip-epub">EPUB</span><span class="format-chip chip-txt">TXT</span>
           </div>
         </div>
 
-        <!-- 文件信息显示 -->
-        <div class="file-info" id="file-info" hidden>
-          <div class="file-details">
-            <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
-              <polyline points="13 2 13 9 20 9"></polyline>
-            </svg>
-            <div class="file-meta">
-              <p class="file-name" id="file-name"></p>
-              <p class="file-size" id="file-size"></p>
+        <div class="converter-card" aria-label="文件转换器">
+          <div class="card-heading">
+            <div><span class="step-label">第一步</span><h2>选择你的文件</h2></div>
+            <span class="local-badge">仅本地读取</span>
+          </div>
+
+          <div class="upload-zone" id="upload-zone" role="button" tabindex="0" aria-controls="file-input" aria-label="选择文件或将文件拖到这里">
+            <input type="file" id="file-input" accept=".pdf,.md,.markdown,.txt,.html,.htm" hidden>
+            <div class="upload-illustration" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 16V4"></path><path d="m7 9 5-5 5 5"></path>
+                <path d="M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"></path>
+              </svg>
             </div>
-            <button class="remove-file" id="remove-file" title="移除文件">✕</button>
-          </div>
-        </div>
-
-        <!-- 格式选择 -->
-        <div class="format-selector">
-          <div class="format-group">
-            <label>源格式</label>
-            <div class="format-badge" id="source-format">自动检测</div>
+            <p class="upload-text">把文件拖到这里</p>
+            <p class="upload-hint">或者 <span>点击选择文件</span> · 支持 PDF、MD、HTML、TXT</p>
           </div>
 
-          <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-            <polyline points="12 5 19 12 12 19"></polyline>
-          </svg>
-
-          <div class="format-group">
-            <label for="target-format">目标格式</label>
-            <select id="target-format" disabled>
-              <option value="">-- 选择格式 --</option>
-            </select>
+          <div class="file-info" id="file-info" hidden>
+            <div class="file-details">
+              <div class="file-icon-wrap" aria-hidden="true">
+                <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                  <polyline points="13 2 13 9 20 9"></polyline>
+                </svg>
+              </div>
+              <div class="file-meta"><p class="file-name" id="file-name"></p><p class="file-size" id="file-size"></p></div>
+              <button class="remove-file" id="remove-file" type="button" aria-label="移除当前文件">移除</button>
+            </div>
           </div>
-        </div>
 
-        <!-- 转换按钮 -->
-        <button class="convert-button" id="convert-button" disabled>
-          <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="23 4 23 10 17 10"></polyline>
-            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-          </svg>
-          开始转换
-        </button>
-
-        <!-- 进度条 -->
-        <div class="progress-container" id="progress-container" hidden>
-          <div class="progress-bar">
-            <div class="progress-fill" id="progress-fill"></div>
+          <div class="format-selector">
+            <div class="format-group"><label>原格式</label><div class="format-badge" id="source-format">自动检测</div></div>
+            <div class="arrow-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14"></path><path d="m14 7 5 5-5 5"></path></svg>
+            </div>
+            <div class="format-group">
+              <label for="target-format">转成</label>
+              <select id="target-format" disabled><option value="">选择格式</option></select>
+            </div>
           </div>
-          <p class="progress-text" id="progress-text">正在转换...</p>
-        </div>
 
-        <!-- 状态消息 -->
-        <div class="status-message" id="status-message" hidden></div>
-      </div>
+          <button class="convert-button" id="convert-button" type="button" disabled>
+            <span>开始转换</span>
+            <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M5 12h14"></path><path d="m14 7 5 5-5 5"></path></svg>
+          </button>
 
-      <!-- 功能说明 -->
-      <div class="features">
-        <div class="feature-card">
-          <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-          </svg>
-          <h3>本地处理</h3>
-          <p>所有文件在您的浏览器中处理，不上传到服务器</p>
+          <div class="progress-container" id="progress-container" role="status" aria-live="polite" hidden>
+            <div class="progress-bar" aria-hidden="true"><div class="progress-fill" id="progress-fill"></div></div>
+            <p class="progress-text" id="progress-text">正在转换...</p>
+          </div>
+          <div class="status-message" id="status-message" role="status" aria-live="polite" hidden></div>
         </div>
+      </section>
 
-        <div class="feature-card">
-          <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"></circle>
-            <polyline points="12 6 12 12 16 14"></polyline>
-          </svg>
-          <h3>快速转换</h3>
-          <p>无需等待，即时完成格式转换</p>
-        </div>
-
-        <div class="feature-card">
-          <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-            <polyline points="22 4 12 14.01 9 11.01"></polyline>
-          </svg>
-          <h3>免费使用</h3>
-          <p>完全免费，无需注册，无限次使用</p>
-        </div>
-      </div>
+      <section class="trust-strip" aria-label="产品特点">
+        <article class="trust-item"><span class="trust-number">01</span><div><h3>留在本地</h3><p>文件只在浏览器内处理，不会上传服务器。</p></div></article>
+        <article class="trust-item"><span class="trust-number">02</span><div><h3>打开就用</h3><p>不用安装、登录或排队，选好格式马上转换。</p></div></article>
+        <article class="trust-item"><span class="trust-number">03</span><div><h3>一直免费</h3><p>没有次数限制，也没有藏在最后一步的收费。</p></div></article>
+      </section>
     </main>
 
     <footer class="footer">
-      <p>© 2026 ConvertKit | 本地运行，保护隐私</p>
-      <div class="supported-formats">
-        <span class="badge">PDF</span>
-        <span class="badge">Markdown</span>
-        <span class="badge">Word</span>
-        <span class="badge">EPUB</span>
-        <span class="badge">HTML</span>
-        <span class="badge">TXT</span>
-      </div>
+      <p>ConvertKit · 让文件转换简单一点</p>
+      <p>文字型 PDF 可直接转 Word，扫描件需先完成 OCR。</p>
     </footer>
   </div>
-
-  <!-- 本地文件解析与生成库 -->
   <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-
   <script src="app.js"></script>
 </body>
 </html>

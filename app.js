@@ -53,6 +53,14 @@ uploadZone.addEventListener('click', () => {
   fileInput.click();
 });
 
+// 支持键盘打开文件选择器
+uploadZone.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    fileInput.click();
+  }
+});
+
 // 阻止默认拖拽行为
 ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
   uploadZone.addEventListener(eventName, preventDefaults, false);
