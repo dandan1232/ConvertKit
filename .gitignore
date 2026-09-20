@@ -1,5 +1,29 @@
-# Ignore dot-prefixed files and directories at every level.
-.*
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
 
-# Keep repository configuration tracked.
-!.gitignore
+# Build outputs
+dist/
+build/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+
+# Temporary
+tmp/
+output/
+*.tmp

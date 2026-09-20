@@ -1,0 +1,36 @@
+{
+  "name": "convertkit",
+  "version": "1.0.0",
+  "description": "在线文件格式转换工具 - 支持 Markdown、HTML、TXT、EPUB 等格式互转",
+  "main": "app.js",
+  "scripts": {
+    "start": "npm run dev",
+    "dev": "npx http-server -p 8080 -o",
+    "serve": "npx http-server -p 8080"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dandan1232/ConvertKit.git"
+  },
+  "keywords": [
+    "converter",
+    "file-conversion",
+    "markdown",
+    "epub",
+    "html",
+    "pdf",
+    "format-converter"
+  ],
+  "author": "dandan1232",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/dandan1232/ConvertKit/issues"
+  },
+  "homepage": "https://github.com/dandan1232/ConvertKit#readme",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  },
+  "dependencies": {
+    "jszip": "^3.10.1"
+  }
+}
