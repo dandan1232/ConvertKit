@@ -178,16 +178,21 @@ async function convertFile(file, sourceExt, targetExt) {
     'markdown_to_html': mdToHtml,
     'md_to_txt': mdToTxt,
     'markdown_to_txt': mdToTxt,
+    'md_to_epub': mdToEpub,
+    'markdown_to_epub': mdToEpub,
 
     // HTML 相关
     'html_to_txt': htmlToTxt,
     'htm_to_txt': htmlToTxt,
     'html_to_md': htmlToMd,
     'htm_to_md': htmlToMd,
+    'html_to_epub': htmlToEpub,
+    'htm_to_epub': htmlToEpub,
 
     // 纯文本相关
     'txt_to_html': txtToHtml,
     'txt_to_md': txtToMd,
+    'txt_to_epub': txtToEpub,
   };
 
   const converterKey = `${sourceExt}_to_${targetExt}`;
@@ -201,8 +206,16 @@ async function convertFile(file, sourceExt, targetExt) {
   }
 
   try {
-    const converted = converter(text);
-    const blob = new Blob([converted], { type: getMimeType(targetExt) });
+    const converted = await converter(text);
+    let blob;
+
+    // EPUB 转换已经返回 Blob，其他格式需要创建 Blob
+    if (targetExt === 'epub') {
+      blob = converted;
+    } else {
+      blob = new Blob([converted], { type: getMimeType(targetExt) });
+    }
+
     const filename = file.name.replace(/\.[^.]+$/, `.${targetExt}`);
 
     return { success: true, blob, filename };
@@ -409,6 +422,147 @@ ${paragraphs}
 function txtToMd(text) {
   // 纯文本转 Markdown，保持原样但添加换行
   return text;
+}
+
+// ========== EPUB 生成函数 ==========
+
+// Markdown → EPUB
+async function mdToEpub(markdown) {
+  const html = mdToHtml(markdown);
+  return await generateEpub('转换文档', html);
+}
+
+// HTML → EPUB
+async function htmlToEpub(html) {
+  return await generateEpub('转换文档', html);
+}
+
+// TXT → EPUB
+async function txtToEpub(text) {
+  const html = txtToHtml(text);
+  return await generateEpub('转换文档', html);
+}
+
+// EPUB 生成核心
+async function generateEpub(title, htmlContent) {
+  const zip = new JSZip();
+
+  // 1. mimetype 文件（必须是第一个文件，无压缩）
+  zip.file('mimetype', 'application/epub+zip', { compression: 'STORE' });
+
+  // 2. META-INF/container.xml
+  const containerXml = `<?xml version="1.0" encoding="UTF-8"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles>
+    <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+  </rootfiles>
+</container>`;
+  zip.folder('META-INF').file('container.xml', containerXml);
+
+  // 3. content.opf (包含元数据和清单)
+  const contentOpf = `<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="uid">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:identifier id="uid">convertkit-${Date.now()}</dc:identifier>
+    <dc:title>${escapeXml(title)}</dc:title>
+    <dc:language>zh-CN</dc:language>
+    <dc:creator>ConvertKit</dc:creator>
+    <dc:date>${new Date().toISOString().split('T')[0]}</dc:date>
+    <meta property="dcterms:modified">${new Date().toISOString().split('.')[0]}Z</meta>
+  </metadata>
+  <manifest>
+    <item id="toc" href="toc.xhtml" media-type="application/xhtml+xml" properties="nav"/>
+    <item id="content" href="content.xhtml" media-type="application/xhtml+xml"/>
+  </manifest>
+  <spine>
+    <itemref idref="content"/>
+  </spine>
+</package>`;
+  zip.folder('OEBPS').file('content.opf', contentOpf);
+
+  // 4. toc.xhtml (目录)
+  const tocXhtml = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+<head>
+  <title>目录</title>
+</head>
+<body>
+  <nav epub:type="toc">
+    <h1>目录</h1>
+    <ol>
+      <li><a href="content.xhtml">${escapeXml(title)}</a></li>
+    </ol>
+  </nav>
+</body>
+</html>`;
+  zip.folder('OEBPS').file('toc.xhtml', tocXhtml);
+
+  // 5. content.xhtml (实际内容)
+  const contentXhtml = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>${escapeXml(title)}</title>
+  <style>
+    body {
+      font-family: serif;
+      line-height: 1.6;
+      margin: 1em;
+    }
+    h1, h2, h3 { margin-top: 1.5em; }
+    p { text-indent: 2em; margin: 0.5em 0; }
+    code {
+      background: #f4f4f4;
+      padding: 0.2em 0.4em;
+      font-family: monospace;
+    }
+    pre {
+      background: #f4f4f4;
+      padding: 1em;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+${extractBodyContent(htmlContent)}
+</body>
+</html>`;
+  zip.folder('OEBPS').file('content.xhtml', contentXhtml);
+
+  // 生成 EPUB 文件
+  const blob = await zip.generateAsync({
+    type: 'blob',
+    mimeType: 'application/epub+zip',
+    compression: 'DEFLATE',
+    compressionOptions: { level: 9 }
+  });
+
+  return blob;
+}
+
+// 提取 HTML body 内容
+function extractBodyContent(html) {
+  const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+  if (bodyMatch) {
+    return bodyMatch[1];
+  }
+  // 如果没有 body 标签，返回整个内容
+  return html.replace(/<\/?html[^>]*>/gi, '')
+             .replace(/<\/?head[^>]*>/gi, '')
+             .replace(/<title[^>]*>[\s\S]*?<\/title>/gi, '')
+             .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+             .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+}
+
+// XML 转义
+function escapeXml(text) {
+  return text.replace(/&/g, '&amp;')
+             .replace(/</g, '&lt;')
+             .replace(/>/g, '&gt;')
+             .replace(/"/g, '&quot;')
+             .replace(/'/g, '&apos;');
 }
 
 // 下载文件
