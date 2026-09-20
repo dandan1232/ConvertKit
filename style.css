@@ -190,6 +190,53 @@ button, [role="button"], select { -webkit-tap-highlight-color: transparent; }
 .remove-file { padding: 7px 10px; color: var(--error); background: var(--surface); border: 1.5px solid currentColor; border-radius: 8px; font-size: 0.78rem; font-weight: 800; cursor: pointer; }
 .remove-file:hover { background: var(--error-bg); }
 
+.batch-controls {
+  margin-top: 18px;
+  padding: 16px;
+  background: var(--yellow);
+  border: 1.5px solid var(--ink);
+  border-radius: 12px;
+}
+
+.batch-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.batch-heading .step-label { margin: 0; color: var(--ink); }
+.batch-summary { font-size: 0.76rem; font-weight: 800; }
+.batch-file-list {
+  display: grid;
+  max-height: 142px;
+  margin-bottom: 14px;
+  overflow-y: auto;
+  list-style: none;
+  background: color-mix(in oklch, var(--surface) 60%, var(--yellow));
+  border: 1px solid color-mix(in oklch, var(--ink) 35%, var(--yellow));
+  border-radius: 9px;
+}
+
+.batch-file-list li {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 10px;
+  font-size: 0.76rem;
+}
+
+.batch-file-list li + li { border-top: 1px solid color-mix(in oklch, var(--ink) 20%, var(--yellow)); }
+.batch-file-list span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.batch-file-list button { flex: 0 0 auto; color: var(--error); background: transparent; border: 0; font-size: 0.72rem; font-weight: 800; cursor: pointer; }
+.batch-file-list button:hover { text-decoration: underline; }
+.batch-mode-label { display: block; margin-bottom: 7px; font-size: 0.78rem; font-weight: 800; }
+.batch-controls select { border-color: color-mix(in oklch, var(--ink) 55%, var(--yellow)); }
+.batch-hint { margin-top: 9px; color: oklch(38% 0.055 91); font-size: 0.76rem; line-height: 1.5; }
+
 .format-selector {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 38px minmax(0, 1fr);

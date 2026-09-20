@@ -14,8 +14,14 @@ const progressContainer = document.getElementById('progress-container');
 const progressFill = document.getElementById('progress-fill');
 const progressText = document.getElementById('progress-text');
 const statusMessage = document.getElementById('status-message');
+const batchControls = document.getElementById('batch-controls');
+const batchMode = document.getElementById('batch-mode');
+const batchSummary = document.getElementById('batch-summary');
+const batchHint = document.getElementById('batch-hint');
+const batchFileList = document.getElementById('batch-file-list');
 
 let currentFile = null;
+let currentFiles = [];
 
 const formatOptions = {
   pdf: { label: 'PDF', targets: ['docx'] },
@@ -46,6 +52,12 @@ function formatFileSize(bytes) {
 // 获取文件扩展名
 function getFileExtension(filename) {
   return filename.slice((filename.lastIndexOf('.') - 1 >>> 0) + 2).toLowerCase();
+}
+
+function normalizeSourceExtension(extension) {
+  if (extension === 'markdown') return 'md';
+  if (extension === 'htm') return 'html';
+  return extension;
 }
 
 // 点击上传区域
@@ -88,44 +100,92 @@ function preventDefaults(e) {
 uploadZone.addEventListener('drop', (e) => {
   const files = e.dataTransfer.files;
   if (files.length > 0) {
-    handleFile(files[0]);
+    handleFiles(files);
   }
 });
 
 // 处理文件选择
 fileInput.addEventListener('change', (e) => {
   if (e.target.files.length > 0) {
-    handleFile(e.target.files[0]);
+    handleFiles(e.target.files);
   }
 });
 
 // 处理文件
-function handleFile(file) {
-  currentFile = file;
+function handleFiles(fileList) {
+  currentFiles = Array.from(fileList);
+  currentFile = currentFiles[0] || null;
+  const file = currentFile;
 
   // 显示文件信息
-  fileName.textContent = file.name;
-  fileSize.textContent = formatFileSize(file.size);
+  const totalSize = currentFiles.reduce((sum, item) => sum + item.size, 0);
+  fileName.textContent = currentFiles.length === 1 ? file.name : currentFiles.length + ' 个文件';
+  fileSize.textContent = currentFiles.length === 1 ? formatFileSize(file.size) : '总大小 ' + formatFileSize(totalSize);
 
   // 隐藏上传区，显示文件信息
   uploadZone.hidden = true;
   fileInfo.hidden = false;
 
   // 检测源格式
-  const ext = getFileExtension(file.name);
+  const ext = normalizeSourceExtension(getFileExtension(file.name));
   const source = formatOptions[ext];
-  sourceFormat.textContent = source?.label || ext.toUpperCase();
+  const extensions = currentFiles.map((item) => normalizeSourceExtension(getFileExtension(item.name)));
+  const sameExtension = extensions.every((item) => item === ext);
+  sourceFormat.textContent = currentFiles.length > 1
+    ? (sameExtension && source ? source.label + ' × ' + currentFiles.length : '混合格式')
+    : (source?.label || ext.toUpperCase());
 
-  updateTargetOptions(source?.targets || []);
-  targetFormat.disabled = !source;
+  batchControls.hidden = currentFiles.length < 2;
+  batchSummary.textContent = currentFiles.length > 1 ? '已选 ' + currentFiles.length + ' 个文件' : '';
+  renderBatchFileList();
+  updateBatchMode();
 
-  if (!source) {
-    showStatus(`暂不支持读取 ${ext.toUpperCase()} 文件`, 'error');
+  if (!source || extensions.some((item) => !formatOptions[item])) {
+    showStatus('列表里有暂不支持的文件格式，请移除后再试', 'error');
   } else {
     hideStatus();
   }
 
   updateConvertButton();
+}
+
+function updateBatchMode() {
+  const extensions = currentFiles.map((file) => normalizeSourceExtension(getFileExtension(file.name)));
+  const sameExtension = extensions.length > 0 && extensions.every((item) => item === extensions[0]);
+  const firstTargets = formatOptions[extensions[0]]?.targets || [];
+
+  if (currentFiles.length < 2 || batchMode.value === 'merge') {
+    updateTargetOptions(sameExtension ? firstTargets : []);
+    batchHint.textContent = sameExtension
+      ? '按选择顺序合并内容，生成一个文件。'
+      : '合并模式要求所有文件使用同一种源格式。';
+  } else {
+    const commonTargets = currentFiles
+      .map((file) => formatOptions[normalizeSourceExtension(getFileExtension(file.name))]?.targets || [])
+      .reduce((common, targets) => common.filter((target) => targets.includes(target)));
+    updateTargetOptions(commonTargets);
+    batchHint.textContent = '每个文件单独转换，最后一次下载全部结果。';
+  }
+
+  targetFormat.disabled = targetFormat.options.length <= 1;
+}
+
+function renderBatchFileList() {
+  batchFileList.replaceChildren();
+  currentFiles.forEach((file, index) => {
+    const item = document.createElement('li');
+    const name = document.createElement('span');
+    const removeButton = document.createElement('button');
+
+    name.textContent = file.name + ' · ' + formatFileSize(file.size);
+    removeButton.type = 'button';
+    removeButton.textContent = '移除';
+    removeButton.dataset.index = index;
+    removeButton.setAttribute('aria-label', '移除 ' + file.name);
+
+    item.append(name, removeButton);
+    batchFileList.append(item);
+  });
 }
 
 function updateTargetOptions(targets) {
@@ -136,13 +196,14 @@ function updateTargetOptions(targets) {
   });
 }
 
-// 移除文件
-removeFileBtn.addEventListener('click', () => {
+function resetSelection() {
   currentFile = null;
+  currentFiles = [];
   fileInput.value = '';
 
   uploadZone.hidden = false;
   fileInfo.hidden = true;
+  batchControls.hidden = true;
 
   sourceFormat.textContent = '自动检测';
   targetFormat.disabled = true;
@@ -150,22 +211,44 @@ removeFileBtn.addEventListener('click', () => {
 
   hideStatus();
   updateConvertButton();
+}
+
+// 移除全部文件
+removeFileBtn.addEventListener('click', resetSelection);
+
+// 从批量列表中移除单个文件
+batchFileList.addEventListener('click', (event) => {
+  const removeButton = event.target.closest('button[data-index]');
+  if (!removeButton) return;
+
+  currentFiles.splice(Number(removeButton.dataset.index), 1);
+  currentFile = currentFiles[0] || null;
+  if (!currentFile) {
+    resetSelection();
+  } else {
+    renderFileSelection();
+  }
 });
 
 // 格式选择变化
 targetFormat.addEventListener('change', updateConvertButton);
+batchMode.addEventListener('change', () => {
+  updateBatchMode();
+  updateConvertButton();
+});
 
 // 更新转换按钮状态
 function updateConvertButton() {
-  convertButton.disabled = !(currentFile && targetFormat.value);
+  convertButton.disabled = !(currentFiles.length > 0 && targetFormat.value);
 }
 
 // 转换按钮点击
 convertButton.addEventListener('click', async () => {
-  if (!currentFile || !targetFormat.value) return;
+  if (!currentFiles.length || !targetFormat.value) return;
 
-  const sourceExt = getFileExtension(currentFile.name);
+  const sourceExt = normalizeSourceExtension(getFileExtension(currentFiles[0].name));
   const targetExt = targetFormat.value;
+  const isMerge = currentFiles.length > 1 && batchMode.value === 'merge';
 
   // 检查是否是相同格式
   if (sourceExt === targetExt) {
@@ -174,11 +257,13 @@ convertButton.addEventListener('click', async () => {
   }
 
   // 显示进度
-  showProgress('正在转换...');
+  showProgress(isMerge ? '正在合并并转换...' : '正在转换 ' + currentFiles.length + ' 个文件...');
   convertButton.disabled = true;
 
   try {
-    const result = await convertFile(currentFile, sourceExt, targetExt);
+    const result = isMerge
+      ? await mergeAndConvert(currentFiles, sourceExt, targetExt)
+      : await convertBatchIndividually(currentFiles, targetExt);
 
     if (result.success) {
       downloadFile(result.blob, result.filename);
@@ -194,6 +279,90 @@ convertButton.addEventListener('click', async () => {
     updateConvertButton();
   }
 });
+
+async function convertBatchIndividually(files, targetExt) {
+  if (files.length === 1) {
+    return await convertFile(files[0], getFileExtension(files[0].name), targetExt);
+  }
+
+  const zip = new JSZip();
+  const usedNames = new Set();
+
+  for (const [index, file] of files.entries()) {
+    showProgress('正在转换 ' + (index + 1) + ' / ' + files.length + '：' + file.name);
+    const result = await convertFile(file, getFileExtension(file.name), targetExt);
+    if (!result.success) {
+      return { success: false, error: file.name + '：' + result.error };
+    }
+
+    let filename = result.filename;
+    const base = filename.replace(/\.[^.]+$/, '');
+    const extension = filename.slice(base.length);
+    let suffix = 2;
+    while (usedNames.has(filename)) {
+      filename = base + '-' + suffix + extension;
+      suffix += 1;
+    }
+    usedNames.add(filename);
+    zip.file(filename, await result.blob.arrayBuffer());
+  }
+
+  return {
+    success: true,
+    blob: await zip.generateAsync({ type: 'blob', mimeType: 'application/zip' }),
+    filename: 'convertkit-batch.zip'
+  };
+}
+
+async function mergeAndConvert(files, sourceExt, targetExt) {
+  const extensions = files.map((file) => normalizeSourceExtension(getFileExtension(file.name)));
+  if (!extensions.every((extension) => extension === sourceExt)) {
+    return { success: false, error: '合并模式要求所有文件使用同一种源格式' };
+  }
+
+  if (sourceExt === 'pdf') {
+    return {
+      success: true,
+      blob: await pdfFilesToDocx(files),
+      filename: 'convertkit-merged.docx'
+    };
+  }
+
+  const contents = [];
+  for (const file of files) {
+    const text = await readFileAsText(file);
+    const title = file.name.replace(/\.[^.]+$/, '');
+    if (sourceExt === 'html' || sourceExt === 'htm') {
+      contents.push('<h1>' + escapeHtml(title) + '</h1>' + extractBodyContent(text));
+    } else {
+      contents.push('# ' + title + '\n\n' + text);
+    }
+  }
+
+  const separator = sourceExt === 'html' || sourceExt === 'htm'
+    ? '\n<hr>\n'
+    : sourceExt === 'txt' ? '\n\n====\n\n' : '\n\n---\n\n';
+  const mergedText = contents.join(separator);
+  const converterGroups = {
+    markdown: { html: mdToHtml, txt: mdToTxt, epub: mdToEpub },
+    txt: { html: txtToHtml, md: txtToMd, epub: txtToEpub },
+    html: { md: htmlToMd, txt: htmlToTxt, epub: htmlToEpub }
+  };
+  const group = sourceExt === 'md' || sourceExt === 'markdown'
+    ? converterGroups.markdown
+    : sourceExt === 'txt' ? converterGroups.txt : converterGroups.html;
+  const converter = group[targetExt];
+  if (!converter) return { success: false, error: '暂不支持这种合并转换' };
+
+  const converted = await converter(mergedText);
+  const blob = targetExt === 'epub' ? converted : new Blob([converted], { type: getMimeType(targetExt) });
+  return { success: true, blob, filename: 'convertkit-merged.' + targetExt };
+}
+
+function escapeHtml(text) {
+  const entities = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+  return text.replace(/[&<>"']/g, (character) => entities[character]);
+}
 
 // 核心转换函数
 async function convertFile(file, sourceExt, targetExt) {
@@ -319,6 +488,51 @@ async function pdfToDocx(file) {
     }]
   });
 
+  return await docx.Packer.toBlob(document);
+}
+
+async function pdfFilesToDocx(files) {
+  if (typeof pdfjsLib === 'undefined' || typeof docx === 'undefined') {
+    throw new Error('转换组件加载失败，请检查网络后刷新页面');
+  }
+
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+
+  const paragraphs = [];
+  let extractedTextLength = 0;
+
+  for (const [fileIndex, file] of files.entries()) {
+    paragraphs.push(new docx.Paragraph({
+      children: [new docx.TextRun({ text: file.name, bold: true, size: 30 })],
+      pageBreakBefore: fileIndex > 0,
+      spacing: { after: 240 }
+    }));
+
+    const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+      const page = await pdf.getPage(pageNumber);
+      const textContent = await page.getTextContent();
+      const lines = groupPdfTextItems(textContent.items);
+
+      lines.forEach((line, lineIndex) => {
+        extractedTextLength += line.trim().length;
+        paragraphs.push(new docx.Paragraph({
+          children: [new docx.TextRun(line || ' ')],
+          pageBreakBefore: pageNumber > 1 && lineIndex === 0,
+          spacing: { after: 120 }
+        }));
+      });
+    }
+  }
+
+  if (extractedTextLength === 0) {
+    throw new Error('未检测到可提取文字；扫描件 PDF 需要先进行 OCR 文字识别');
+  }
+
+  const document = new docx.Document({
+    sections: [{ properties: {}, children: paragraphs }]
+  });
   return await docx.Packer.toBlob(document);
 }
 

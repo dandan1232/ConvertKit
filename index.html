@@ -42,7 +42,7 @@
           </div>
 
           <div class="upload-zone" id="upload-zone" role="button" tabindex="0" aria-controls="file-input" aria-label="选择文件或将文件拖到这里">
-            <input type="file" id="file-input" accept=".pdf,.md,.markdown,.txt,.html,.htm" hidden>
+            <input type="file" id="file-input" accept=".pdf,.md,.markdown,.txt,.html,.htm" multiple hidden>
             <div class="upload-illustration" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 16V4"></path><path d="m7 9 5-5 5 5"></path>
@@ -50,7 +50,7 @@
               </svg>
             </div>
             <p class="upload-text">把文件拖到这里</p>
-            <p class="upload-hint">或者 <span>点击选择文件</span> · 支持 PDF、MD、HTML、TXT</p>
+            <p class="upload-hint">或者 <span>点击选择文件</span> · 可一次选择多个</p>
           </div>
 
           <div class="file-info" id="file-info" hidden>
@@ -64,6 +64,20 @@
               <div class="file-meta"><p class="file-name" id="file-name"></p><p class="file-size" id="file-size"></p></div>
               <button class="remove-file" id="remove-file" type="button" aria-label="移除当前文件">移除</button>
             </div>
+          </div>
+
+          <div class="batch-controls" id="batch-controls" hidden>
+            <div class="batch-heading">
+              <span class="step-label">批量模式</span>
+              <span class="batch-summary" id="batch-summary"></span>
+            </div>
+            <ul class="batch-file-list" id="batch-file-list" aria-label="已选择的文件"></ul>
+            <label class="batch-mode-label" for="batch-mode">怎么处理这些文件？</label>
+            <select id="batch-mode">
+              <option value="individual">逐个转换（打包成 ZIP）</option>
+              <option value="merge">合并后转换成一个文件</option>
+            </select>
+            <p class="batch-hint" id="batch-hint">每个文件单独转换，最后一次下载全部结果。</p>
           </div>
 
           <div class="format-selector">
